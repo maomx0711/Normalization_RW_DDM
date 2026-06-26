@@ -88,6 +88,16 @@ body {
   margin: 0 0 18px;
 }
 
+/* 只在选择试次中使用的三角形布局容器；宽高随视口变化，避免不同屏幕尺寸下遮挡。 */
+.bandit-choice-layout {
+  height: min(64vh, 560px);
+  margin: clamp(8px, 2vh, 24px) auto 0;
+  max-width: 920px;
+  min-height: min(360px, 54vh);
+  position: relative;
+  width: min(92vw, 920px);
+}
+
 .jspsych-btn.bandit-choice {
   background: var(--card);
   border: 2px solid var(--line);
@@ -95,14 +105,18 @@ body {
   box-shadow: 0 8px 22px rgb(15 23 42 / 8%);
   color: var(--ink);
   cursor: pointer;
-  margin: 12px;
-  min-height: 190px;
+  left: var(--choice-left);
+  margin: 0;
+  min-height: clamp(125px, 18vh, 180px);
   padding: 0;
+  position: absolute;
+  top: var(--choice-top);
+  transform: translate(-50%, -50%);
   transition:
     border-color 120ms ease,
     box-shadow 120ms ease,
     transform 120ms ease;
-  width: 240px;
+  width: clamp(130px, 20vw, 230px);
 }
 
 .jspsych-btn.bandit-choice:hover,
@@ -110,7 +124,7 @@ body {
   border-color: var(--accent);
   box-shadow: 0 14px 30px rgb(37 99 235 / 18%);
   outline: none;
-  transform: translateY(-2px);
+  transform: translate(-50%, calc(-50% - 2px));
 }
 
 .bandit-card {
@@ -128,12 +142,12 @@ body {
   border-radius: 22px;
   color: #fff;
   display: flex;
-  font-size: 2.6rem;
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
   font-weight: 800;
-  height: 92px;
+  height: clamp(58px, 9vw, 92px);
   justify-content: center;
   letter-spacing: 0.02em;
-  width: 92px;
+  width: clamp(58px, 9vw, 92px);
 }
 
 .bandit-label {
@@ -216,13 +230,14 @@ body {
     <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.0.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.2.1"></script>
 
     <!-- webgazer 用于浏览器摄像头眼动估计；localhost 或 HTTPS 环境下浏览器才会授权摄像头。 -->
     <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
 
     <!-- 实验逻辑已内联到此处，便于单文件运行和审阅。 -->
     <script>
-/* global initJsPsych, jsPsychHtmlButtonResponse, jsPsychHtmlKeyboardResponse, jsPsychSurveyHtmlForm, jsPsychCallFunction, webgazer */
+/* global initJsPsych, jsPsychHtmlButtonResponse, jsPsychHtmlKeyboardResponse, jsPsychSurveyHtmlForm, jsPsychCallFunction, jsPsychFullscreen, webgazer */
 
 // ===================== 实验参数与区块条件 =====================
 // 这些常量控制实验版本、练习试次数、正式区块长度和单次奖励大小。
@@ -230,6 +245,13 @@ const EXPERIMENT_VERSION = "0.1.0";
 const PRACTICE_TRIALS = 6;
 const TRIALS_PER_BLOCK = 30;
 const REWARD_MAGNITUDE = 10;
+
+// 三个刺激在选择区域中的相对位置：上方一个、下方左右各一个，形成等腰三角形。
+const TRIANGLE_POSITIONS = [
+  { left: "50%", top: "22%" },
+  { left: "26%", top: "78%" },
+  { left: "74%", top: "78%" },
+];
 
 // 三个老虎机选项的固定外观；真实奖励概率会在每个区块中重新随机分配。
 const ARM_APPEARANCE = [
@@ -329,10 +351,10 @@ function renderArmChoice(arm, displayIndex) {
 }
 
 function makeButtonHtml(displayOrder) {
-  return displayOrder.map(
-    (arm, index) =>
-      `<button class="jspsych-btn bandit-choice" data-choice-index="${index}" data-arm-id="${arm.id}">%choice%</button>`,
-  );
+  return displayOrder.map((arm, index) => {
+    const position = TRIANGLE_POSITIONS[index];
+    return `<button class="jspsych-btn bandit-choice" style="--choice-left:${position.left}; --choice-top:${position.top};" data-choice-index="${index}" data-arm-id="${arm.id}">%choice%</button>`;
+  });
 }
 
 function makeChoiceStimulus(block, trialInBlock, isPractice) {
@@ -412,6 +434,12 @@ function summarizeGaze(samples, rects, selectedArm) {
 
 // 选择试次开始时记录三个选项按钮在屏幕上的 AOI 边界，并开始缓存 gaze 样本。
 function startGazeTrial(meta) {
+  // jsPsych 会把按钮放进默认容器，这里只给选择试次容器加布局类，避免影响说明页按钮。
+  const buttonGroup = document.getElementById("jspsych-html-button-response-btngroup");
+  if (buttonGroup) {
+    buttonGroup.classList.add("bandit-choice-layout");
+  }
+
   const buttons = Array.from(document.querySelectorAll(".bandit-choice"));
   const rects = buttons.map((button) => {
     const rect = button.getBoundingClientRect();
@@ -686,6 +714,21 @@ function makeDownloadHtml() {
 // 构建完整 jsPsych 时间线：同意书、说明、眼动校准、练习、正式区块和数据下载。
 function buildTimeline() {
   const timeline = [];
+
+  // 实验一开始请求全屏，尽量统一呈现区域并减少浏览器界面对三角形刺激布局的干扰。
+  timeline.push({
+    type: jsPsychFullscreen,
+    fullscreen_mode: true,
+    message: `
+      <div class="screen center">
+        <h1>三臂老虎机实验</h1>
+        <p>点击下方按钮后，实验将进入全屏模式。</p>
+        <p class="small">全屏有助于保持刺激相对位置稳定，并减少不同屏幕尺寸造成的遮挡。</p>
+      </div>
+    `,
+    button_label: "进入全屏并开始",
+    data: { task: "fullscreen_start" },
+  });
 
   timeline.push({
     type: jsPsychSurveyHtmlForm,

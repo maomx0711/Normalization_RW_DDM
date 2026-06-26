@@ -30,6 +30,7 @@ python3 -m http.server 8000
 
 > 浏览器眼动使用 webgazer.js，需要 HTTPS 或 localhost，并依赖被试授权摄像头。
 > 实验的 CSS 和 JavaScript 已内联在 `index.html` 中，便于单文件分发和审阅。
+> 实验开始会请求全屏；三臂刺激用相对位置呈等腰三角形排列，以适配不同屏幕尺寸。
 
 ## 拟合 DN-RL-DDM
 

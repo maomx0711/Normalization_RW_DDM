@@ -1,0 +1,1291 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>三臂老虎机学习与迁移实验 - 全部反馈版</title>
+
+    <!-- 从 CDN 加载 jsPsych 核心样式。本文件其余 CSS 与 JavaScript 均已内联。 -->
+    <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" />
+
+    <style>
+:root {
+  --bg: #f6f7fb;
+  --card: #ffffff;
+  --ink: #1f2937;
+  --muted: #5f6b7a;
+  --line: #d8dee9;
+  --accent: #2563eb;
+  --accent-dark: #1d4ed8;
+  --good: #15803d;
+  --bad: #b91c1c;
+  --warn: #b45309;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.jspsych-content {
+  max-width: 1120px;
+}
+
+.screen {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 18px 48px rgb(15 23 42 / 10%);
+  padding: 32px;
+  text-align: left;
+}
+
+.screen h1,
+.screen h2,
+.screen h3 {
+  margin-top: 0;
+}
+
+.screen p,
+.screen li {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.center {
+  text-align: center;
+}
+
+.small {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.warning {
+  color: var(--warn);
+  font-weight: 700;
+}
+
+.outcome-table {
+  border-collapse: collapse;
+  margin: 18px auto;
+  width: min(620px, 100%);
+}
+
+.outcome-table th,
+.outcome-table td {
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.outcome-table th {
+  background: #eef2ff;
+}
+
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.pill {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 999px;
+  color: #3730a3;
+  padding: 6px 12px;
+}
+
+.choice-prompt {
+  color: var(--muted);
+  margin: 0 auto 14px;
+  max-width: 720px;
+}
+
+/* 三选项学习试次：三个刺激用相对坐标放在等腰三角形三个顶点。 */
+.triangle-choice-layout {
+  height: min(64vh, 560px);
+  margin: clamp(8px, 2vh, 24px) auto 0;
+  max-width: 920px;
+  min-height: min(360px, 54vh);
+  position: relative;
+  width: min(92vw, 920px);
+}
+
+/* 二选项迁移试次：左右两个刺激同样使用相对坐标，适配不同屏幕。 */
+.pair-choice-layout {
+  height: min(44vh, 380px);
+  margin: clamp(10px, 3vh, 28px) auto 0;
+  max-width: 780px;
+  min-height: min(260px, 38vh);
+  position: relative;
+  width: min(86vw, 780px);
+}
+
+.jspsych-btn.cue-choice {
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgb(15 23 42 / 8%);
+  color: var(--ink);
+  cursor: pointer;
+  left: var(--choice-left);
+  margin: 0;
+  min-height: clamp(125px, 18vh, 180px);
+  padding: 0;
+  position: absolute;
+  top: var(--choice-top);
+  transform: translate(-50%, -50%);
+  transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+  width: clamp(130px, 20vw, 230px);
+}
+
+.jspsych-btn.cue-choice:hover,
+.jspsych-btn.cue-choice:focus {
+  border-color: var(--accent);
+  box-shadow: 0 14px 30px rgb(37 99 235 / 18%);
+  outline: none;
+  transform: translate(-50%, calc(-50% - 2px));
+}
+
+.cue-card {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  justify-content: center;
+  padding: 20px;
+}
+
+.cue-symbol {
+  align-items: center;
+  border-radius: 22px;
+  color: #fff;
+  display: flex;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 800;
+  height: clamp(58px, 9vw, 92px);
+  justify-content: center;
+  letter-spacing: 0.02em;
+  width: clamp(58px, 9vw, 92px);
+}
+
+.cue-label {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.feedback-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+.feedback-card {
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  min-width: 160px;
+  padding: 18px;
+  text-align: center;
+}
+
+.feedback-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgb(37 99 235 / 16%);
+}
+
+.feedback-card .amount {
+  color: var(--good);
+  font-size: 2.6rem;
+  font-weight: 800;
+  margin: 8px 0;
+}
+
+.quiz-feedback.failed {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+.quiz-feedback.passed {
+  color: var(--good);
+  font-weight: 700;
+}
+
+.rating-wrap {
+  margin: 24px auto 0;
+  max-width: 640px;
+  text-align: center;
+}
+
+.rating-cue {
+  display: inline-flex;
+  margin-bottom: 20px;
+}
+
+.rating-slider {
+  width: min(560px, 86vw);
+}
+
+
+/* 眼动校准蓝点必须位于 webgazer 视频/画布之上，否则摄像头打开后可能被覆盖。 */
+.gaze-calibration-wrap {
+  height: 72vh;
+  position: relative;
+  width: 92vw;
+  z-index: 10000;
+}
+
+.gaze-calibration-dot {
+  background: var(--accent);
+  border: 4px solid #dbeafe;
+  border-radius: 999px;
+  box-shadow: 0 0 0 6px rgb(37 99 235 / 20%);
+  color: #fff;
+  font-weight: 800;
+  height: 46px;
+  left: var(--gaze-left);
+  position: fixed;
+  top: var(--gaze-top);
+  transform: translate(-50%, -50%);
+  width: 46px;
+  z-index: 2147483647;
+}
+
+#webgazerVideoContainer,
+#webgazerVideoFeed,
+#webgazerFaceOverlay,
+#webgazerFaceFeedbackBox {
+  z-index: 1000 !important;
+}
+
+#webgazerGazeDot {
+  z-index: 1001 !important;
+}
+
+.download-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.download-link {
+  background: var(--accent);
+  border-radius: 10px;
+  color: #fff;
+  display: inline-block;
+  font-weight: 700;
+  padding: 12px 18px;
+  text-decoration: none;
+}
+
+.download-link:hover {
+  background: var(--accent-dark);
+}
+    </style>
+  </head>
+  <body>
+    <noscript>本实验需要启用 JavaScript。</noscript>
+
+    <!-- jsPsych 核心包与本实验用到的插件。 -->
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.0.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.2.1"></script>
+    <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
+
+    <script>
+/* global initJsPsych, jsPsychHtmlButtonResponse, jsPsychHtmlKeyboardResponse, jsPsychSurveyHtmlForm, jsPsychCallFunction, jsPsychFullscreen, webgazer */
+
+// ===================== 实验版本与总体设置 =====================
+const EXPERIMENT_VERSION = "0.2.0";
+const FEEDBACK_MODE = "all"; // chosen: 只反馈所选选项；all: 反馈三个选项金额。
+const FEEDBACK_MODE_LABEL = "全部反馈版";
+const OUTCOME_MIN = 0;
+const OUTCOME_MAX = 100;
+const POINT_TO_PENCE = 0.02;
+const OUTCOME_SD = 2; // 方差为 4，因此标准差为 2。
+const TRAINING_TRIALS = 12;
+const TRAINING_PASS_ACCURACY = 0.60;
+const MAX_VOLUNTARY_TRAINING_REPEATS = 2; // 达标后最多可自愿重复训练 2 次。
+const LEARNING_REPETITIONS = 45; // 4 个固定三元组 * 45 = 180 试次。
+const TRANSFER_REPETITIONS = 4; // 45 个二元组合 * 4 = 180 试次。
+const RATING_REPETITIONS = 4; // 10 个线索 * 4 = 40 试次。
+
+// 三个刺激在选择区域中的相对位置：上方一个、下方左右各一个，形成等腰三角形。
+const TRIANGLE_POSITIONS = [
+  { left: "50%", top: "22%" },
+  { left: "26%", top: "78%" },
+  { left: "74%", top: "78%" },
+];
+
+// 二选一迁移任务使用左右相对位置。
+const PAIR_POSITIONS = [
+  { left: "30%", top: "52%" },
+  { left: "70%", top: "52%" },
+];
+
+// 10 个学习线索。mean 是实验者设定的真实平均价值，被试不会直接看到。
+const LEARNING_CUES = [
+  { id: "C1", label: "线索 1", symbol: "A", color: "#2563eb", mean: 8 },
+  { id: "C2", label: "线索 2", symbol: "B", color: "#16a34a", mean: 18 },
+  { id: "C3", label: "线索 3", symbol: "C", color: "#7c3aed", mean: 30 },
+  { id: "C4", label: "线索 4", symbol: "D", color: "#db2777", mean: 42 },
+  { id: "C5", label: "线索 5", symbol: "E", color: "#ea580c", mean: 54 },
+  { id: "C6", label: "线索 6", symbol: "F", color: "#0891b2", mean: 62 },
+  { id: "C7", label: "线索 7", symbol: "G", color: "#4f46e5", mean: 70 },
+  { id: "C8", label: "线索 8", symbol: "H", color: "#65a30d", mean: 78 },
+  { id: "C9", label: "线索 9", symbol: "I", color: "#ca8a04", mean: 88 },
+  { id: "C10", label: "线索 10", symbol: "J", color: "#dc2626", mean: 96 },
+];
+
+// 学习阶段使用固定三元组。每个三元组呈现 45 次，总计 180 试次。
+const LEARNING_TRIPLETS = [
+  { id: "L1", cueIds: ["C1", "C5", "C9"] },
+  { id: "L2", cueIds: ["C2", "C6", "C10"] },
+  { id: "L3", cueIds: ["C3", "C7", "C8"] },
+  { id: "L4", cueIds: ["C4", "C5", "C10"] },
+];
+
+// 训练线索不进入正式迁移/评分分析，只用于熟悉反应方式。
+const TRAINING_CUES = [
+  { id: "T1", label: "练习 1", symbol: "P", color: "#64748b", mean: 20 },
+  { id: "T2", label: "练习 2", symbol: "Q", color: "#0f766e", mean: 55 },
+  { id: "T3", label: "练习 3", symbol: "R", color: "#9333ea", mean: 85 },
+  { id: "T4", label: "练习 4", symbol: "S", color: "#b45309", mean: 35 },
+  { id: "T5", label: "练习 5", symbol: "T", color: "#be123c", mean: 65 },
+  { id: "T6", label: "练习 6", symbol: "U", color: "#0369a1", mean: 95 },
+];
+
+const TRAINING_TRIPLETS = [
+  { id: "P1", cueIds: ["T1", "T2", "T3"] },
+  { id: "P2", cueIds: ["T4", "T5", "T6"] },
+];
+
+const state = {
+  participantId: null,
+  quizPassed: false,
+  trainingAttempt: 0,
+  voluntaryTrainingRepeats: 0,
+  trainingTrials: [],
+  trainingCorrect: 0,
+  trainingCount: 0,
+  repeatTraining: false,
+  learningTrials: [],
+  transferTrials: [],
+  ratingTrials: [],
+  learningPoints: 0,
+  transferCorrect: 0,
+  elicitationOrder: null,
+  eyeTracking: {
+    enabled: false,
+    started: false,
+    currentTrial: null,
+    error: null,
+  },
+};
+
+const cueMap = Object.fromEntries(LEARNING_CUES.map((cue) => [cue.id, cue]));
+const trainingCueMap = Object.fromEntries(TRAINING_CUES.map((cue) => [cue.id, cue]));
+
+const jsPsych = initJsPsych({
+  show_progress_bar: true,
+  auto_update_progress_bar: true,
+  on_finish: () => {
+    stopWebGazer();
+  },
+});
+
+function safeJson(value) {
+  return JSON.stringify(value);
+}
+
+function roundNumber(value, digits = 2) {
+  const scale = 10 ** digits;
+  return Math.round(value * scale) / scale;
+}
+
+function makeParticipantId() {
+  return `P${jsPsych.randomization.randomID(8)}`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+// Box-Muller 采样正态分布；本实验把采样结果截断到 0-100 并取整数点数。
+function sampleNormal(mean, sd) {
+  const u1 = Math.max(Math.random(), Number.EPSILON);
+  const u2 = Math.random();
+  const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  return mean + sd * z;
+}
+
+function sampleOutcome(cue) {
+  return Math.round(clamp(sampleNormal(cue.mean, OUTCOME_SD), OUTCOME_MIN, OUTCOME_MAX));
+}
+
+function cuesFromIds(ids, sourceMap = cueMap) {
+  return ids.map((id) => sourceMap[id]);
+}
+
+function makeTripletTrials(triplets, repetitions, sourceMap, phase) {
+  const trials = [];
+  for (let rep = 0; rep < repetitions; rep += 1) {
+    triplets.forEach((triplet) => {
+      trials.push({
+        phase,
+        triplet_id: triplet.id,
+        repetition: rep + 1,
+        cues: cuesFromIds(triplet.cueIds, sourceMap),
+      });
+    });
+  }
+  return jsPsych.randomization.shuffle(trials);
+}
+
+function makeTransferTrials() {
+  const pairs = [];
+  for (let i = 0; i < LEARNING_CUES.length; i += 1) {
+    for (let j = i + 1; j < LEARNING_CUES.length; j += 1) {
+      pairs.push({ id: `T_${LEARNING_CUES[i].id}_${LEARNING_CUES[j].id}`, cues: [LEARNING_CUES[i], LEARNING_CUES[j]] });
+    }
+  }
+
+  const trials = [];
+  for (let rep = 0; rep < TRANSFER_REPETITIONS; rep += 1) {
+    pairs.forEach((pair) => trials.push({ ...pair, phase: "transfer", repetition: rep + 1 }));
+  }
+  return jsPsych.randomization.shuffle(trials);
+}
+
+function makeRatingTrials() {
+  const trials = [];
+  for (let rep = 0; rep < RATING_REPETITIONS; rep += 1) {
+    LEARNING_CUES.forEach((cue) => trials.push({ phase: "rating", cue, repetition: rep + 1 }));
+  }
+  return jsPsych.randomization.shuffle(trials);
+}
+
+function prepareDisplayOrder(trial) {
+  if (!trial.displayOrder) {
+    trial.displayOrder = jsPsych.randomization.shuffle(trial.cues);
+  }
+  return trial.displayOrder;
+}
+
+function renderCueCard(cue, displayIndex = null) {
+  const keyLabel = displayIndex === null ? "" : `<div class="small">位置 ${displayIndex + 1}</div>`;
+  return `
+    <div class="cue-card">
+      <div class="cue-symbol" style="background:${cue.color}">${cue.symbol}</div>
+      <div class="cue-label">${cue.label}</div>
+      ${keyLabel}
+    </div>
+  `;
+}
+
+function makeButtonHtml(cues) {
+  const positions = cues.length === 3 ? TRIANGLE_POSITIONS : PAIR_POSITIONS;
+  return cues.map((cue, index) => {
+    const position = positions[index];
+    return `<button class="jspsych-btn cue-choice" style="--choice-left:${position.left}; --choice-top:${position.top};" data-cue-id="${cue.id}">%choice%</button>`;
+  });
+}
+
+function addChoiceLayout(cueCount) {
+  const group = document.getElementById("jspsych-html-button-response-btngroup");
+  if (!group) {
+    return;
+  }
+  group.classList.add(cueCount === 3 ? "triangle-choice-layout" : "pair-choice-layout");
+}
+
+function bestCue(cues) {
+  return cues.reduce((best, cue) => (cue.mean > best.mean ? cue : best), cues[0]);
+}
+
+function trialHeader(label, current, total) {
+  return `
+    <div class="status-row">
+      <span class="pill">${label}</span>
+      <span class="pill">试次 ${current} / ${total}</span>
+      <span class="pill">反馈模式：${FEEDBACK_MODE_LABEL}</span>
+    </div>
+  `;
+}
+
+
+// ===================== 浏览器眼动检测与蓝点校准 =====================
+function startGazeTrial(meta) {
+  const buttons = Array.from(document.querySelectorAll(".cue-choice"));
+  const rects = buttons.map((button) => {
+    const rect = button.getBoundingClientRect();
+    return {
+      cue_id: button.dataset.cueId,
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+    };
+  });
+
+  state.eyeTracking.currentTrial = {
+    meta,
+    rects,
+    samples: [],
+    started_at: performance.now(),
+  };
+}
+
+function summarizeGaze(samples, rects, selectedCue) {
+  const dwellByCue = Object.fromEntries(rects.map((rect) => [rect.cue_id, 0]));
+  let firstAoiCue = null;
+  let validSamples = 0;
+
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = samples[index];
+    if (!Number.isFinite(sample.x) || !Number.isFinite(sample.y)) {
+      continue;
+    }
+
+    validSamples += 1;
+    const hit = rects.find(
+      (rect) =>
+        sample.x >= rect.left &&
+        sample.x <= rect.right &&
+        sample.y >= rect.top &&
+        sample.y <= rect.bottom,
+    );
+
+    if (!hit) {
+      continue;
+    }
+
+    if (firstAoiCue === null) {
+      firstAoiCue = hit.cue_id;
+    }
+
+    const next = samples[index + 1];
+    const rawDuration = next ? next.t - sample.t : 16.7;
+    const duration = Math.max(0, Math.min(rawDuration, 100));
+    dwellByCue[hit.cue_id] += duration;
+  }
+
+  const totalDwell = Object.values(dwellByCue).reduce((sum, duration) => sum + duration, 0);
+  const dwellPropByCue = Object.fromEntries(
+    Object.entries(dwellByCue).map(([cue, duration]) => [cue, totalDwell > 0 ? duration / totalDwell : 0]),
+  );
+
+  return {
+    gaze_valid_samples: validSamples,
+    gaze_total_aoi_ms: roundNumber(totalDwell),
+    gaze_first_aoi_cue: firstAoiCue,
+    gaze_dwell_ms_json: safeJson(Object.fromEntries(Object.entries(dwellByCue).map(([cue, duration]) => [cue, roundNumber(duration)]))),
+    gaze_dwell_prop_json: safeJson(Object.fromEntries(Object.entries(dwellPropByCue).map(([cue, proportion]) => [cue, roundNumber(proportion, 4)]))),
+    gaze_selected_dwell_prop: selectedCue ? roundNumber(dwellPropByCue[selectedCue] || 0, 4) : null,
+  };
+}
+
+function stopGazeTrial(data) {
+  const current = state.eyeTracking.currentTrial;
+  state.eyeTracking.currentTrial = null;
+
+  data.gaze_enabled = state.eyeTracking.enabled;
+  data.gaze_error = state.eyeTracking.error;
+
+  if (!current) {
+    data.gaze_n_samples = 0;
+    return;
+  }
+
+  const compactSamples = current.samples.map((sample) => ({
+    x: roundNumber(sample.x),
+    y: roundNumber(sample.y),
+    t: roundNumber(sample.t - current.started_at),
+  }));
+
+  data.gaze_n_samples = compactSamples.length;
+  data.gaze_aoi_rects_json = safeJson(current.rects.map((rect) => ({ ...rect })));
+  data.gaze_samples_json = safeJson(compactSamples);
+  Object.assign(data, summarizeGaze(current.samples, current.rects, data.selected_cue));
+}
+
+async function startWebGazer() {
+  if (!window.webgazer) {
+    state.eyeTracking.enabled = false;
+    state.eyeTracking.error = "webgazer_not_loaded";
+    return;
+  }
+
+  try {
+    webgazer
+      .setGazeListener((gazeData) => {
+        if (!gazeData) {
+          return;
+        }
+
+        const sample = {
+          x: gazeData.x,
+          y: gazeData.y,
+          t: performance.now(),
+        };
+
+        if (state.eyeTracking.currentTrial) {
+          state.eyeTracking.currentTrial.samples.push(sample);
+        }
+      })
+      .showPredictionPoints(true)
+      .showVideoPreview(true)
+      .showFaceOverlay(false)
+      .showFaceFeedbackBox(false);
+
+    if (typeof webgazer.setRegression === "function") {
+      webgazer.setRegression("ridge");
+    }
+
+    await webgazer.begin();
+    state.eyeTracking.enabled = true;
+    state.eyeTracking.started = true;
+    state.eyeTracking.error = null;
+  } catch (error) {
+    state.eyeTracking.enabled = false;
+    state.eyeTracking.error = error && error.message ? error.message : "webgazer_start_failed";
+  }
+}
+
+function stopWebGazer() {
+  if (window.webgazer && state.eyeTracking.started) {
+    try {
+      webgazer.end();
+    } catch (error) {
+      state.eyeTracking.error = error && error.message ? error.message : "webgazer_stop_failed";
+    }
+  }
+}
+
+function makeCalibrationTrial(point, repeatIndex) {
+  return {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+      <div class="gaze-calibration-wrap">
+        <p class="small center">眼动校准：请看着蓝点并点击它（${repeatIndex + 1}/3）。如果摄像头预览已打开，蓝点也应显示在最上层。</p>
+      </div>
+    `,
+    choices: ["+"],
+    button_html: [`<button class="jspsych-btn gaze-calibration-dot" style="--gaze-left:${point.x}vw; --gaze-top:${point.y}vh;">%choice%</button>`],
+    data: {
+      task: "gaze_calibration",
+      calibration_x_vw: point.x,
+      calibration_y_vh: point.y,
+      calibration_repeat: repeatIndex + 1,
+    },
+    on_load: () => {
+      const dot = document.querySelector(".gaze-calibration-dot");
+      if (!dot || !window.webgazer || typeof webgazer.recordScreenPosition !== "function") {
+        return;
+      }
+      dot.addEventListener("mousedown", (event) => {
+        webgazer.recordScreenPosition(event.clientX, event.clientY, "click");
+      });
+    },
+  };
+}
+
+function makeGazeSetupTimeline() {
+  const calibrationPoints = [
+    { x: 12, y: 16 },
+    { x: 50, y: 16 },
+    { x: 88, y: 16 },
+    { x: 12, y: 50 },
+    { x: 50, y: 50 },
+    { x: 88, y: 50 },
+    { x: 12, y: 84 },
+    { x: 50, y: 84 },
+    { x: 88, y: 84 },
+  ];
+
+  const timeline = [
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="screen center">
+          <h2>眼动检测</h2>
+          <p>接下来浏览器会请求摄像头权限，用于估计注视位置。</p>
+          <p class="small">请允许摄像头访问。若摄像头不可用，实验仍会继续，但会在数据中记录眼动错误。</p>
+        </div>
+      `,
+      choices: ["启动摄像头并继续"],
+      data: { task: "gaze_instruction" },
+    },
+    {
+      type: jsPsychCallFunction,
+      async: true,
+      func: (done) => {
+        startWebGazer().finally(done);
+      },
+      data: { task: "webgazer_start" },
+    },
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: () => `
+        <div class="screen center">
+          <h2>蓝点校准</h2>
+          <p>${state.eyeTracking.enabled ? "摄像头已启动。" : "摄像头未成功启动，实验仍会继续。"}</p>
+          <p>下一步会显示蓝点。请确认摄像头打开时蓝点仍然可见，然后看着蓝点并点击。</p>
+          <p class="small">当前眼动状态：${state.eyeTracking.enabled ? "enabled" : "disabled"}${state.eyeTracking.error ? `；错误：${state.eyeTracking.error}` : ""}</p>
+        </div>
+      `,
+      choices: ["开始蓝点校准"],
+      data: { task: "gaze_calibration_instruction" },
+    },
+  ];
+
+  calibrationPoints.forEach((point) => {
+    for (let repeatIndex = 0; repeatIndex < 3; repeatIndex += 1) {
+      timeline.push(makeCalibrationTrial(point, repeatIndex));
+    }
+  });
+
+  return timeline;
+}
+
+function makeChoiceTrial(storeName, index, phaseLabel, totalTrials, withOutcome) {
+  return {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: () => {
+      const trial = state[storeName][index];
+      prepareDisplayOrder(trial);
+      return `
+        <div class="center">
+          ${trialHeader(phaseLabel, index + 1, totalTrials)}
+          <p class="choice-prompt">请选择你认为平均价值最高的选项。</p>
+        </div>
+      `;
+    },
+    choices: () => prepareDisplayOrder(state[storeName][index]).map((cue, displayIndex) => renderCueCard(cue, displayIndex)),
+    button_html: () => makeButtonHtml(prepareDisplayOrder(state[storeName][index])),
+    data: {
+      task: "choice",
+      feedback_mode: FEEDBACK_MODE,
+      experiment_version: EXPERIMENT_VERSION,
+    },
+    on_load: () => {
+      const trial = state[storeName][index];
+      addChoiceLayout(trial.cues.length);
+      startGazeTrial({
+        phase: trial.phase,
+        trial_index: index + 1,
+        cue_ids: trial.cues.map((cue) => cue.id),
+      });
+    },
+    on_finish: (data) => {
+      const trial = state[storeName][index];
+      const displayOrder = prepareDisplayOrder(trial);
+      const selectedCue = displayOrder[data.response];
+      const optimalCue = bestCue(trial.cues);
+      const isCorrect = selectedCue.id === optimalCue.id;
+      const outcomes = {};
+
+      if (withOutcome) {
+        if (FEEDBACK_MODE === "all") {
+          trial.cues.forEach((cue) => {
+            outcomes[cue.id] = sampleOutcome(cue);
+          });
+        } else {
+          outcomes[selectedCue.id] = sampleOutcome(selectedCue);
+        }
+      }
+
+      const selectedOutcome = withOutcome ? outcomes[selectedCue.id] : null;
+      if (trial.phase === "training") {
+        state.trainingCount += 1;
+        state.trainingCorrect += isCorrect ? 1 : 0;
+      }
+      if (trial.phase === "learning") {
+        state.learningPoints += selectedOutcome || 0;
+      }
+      if (trial.phase === "transfer") {
+        state.transferCorrect += isCorrect ? 1 : 0;
+      }
+
+      data.phase = trial.phase;
+      data.trial_id = trial.id || trial.triplet_id;
+      data.repetition = trial.repetition;
+      data.cue_ids_json = safeJson(trial.cues.map((cue) => cue.id));
+      data.display_order_json = safeJson(displayOrder.map((cue) => cue.id));
+      data.cue_means_json = safeJson(Object.fromEntries(trial.cues.map((cue) => [cue.id, cue.mean])));
+      data.selected_cue = selectedCue.id;
+      data.selected_label = selectedCue.label;
+      data.selected_mean = selectedCue.mean;
+      data.optimal_cue = optimalCue.id;
+      data.correct = isCorrect ? 1 : 0;
+      data.outcomes_json = safeJson(outcomes);
+      data.selected_outcome = selectedOutcome;
+      data.learning_points_running_total = state.learningPoints;
+      stopGazeTrial(data);
+    },
+  };
+}
+
+function makeOutcomeFeedbackTrial() {
+  return {
+    type: jsPsychHtmlKeyboardResponse,
+    choices: "NO_KEYS",
+    trial_duration: 1100,
+    stimulus: () => {
+      const lastChoice = jsPsych.data.get().filter({ task: "choice" }).last(1).values()[0];
+      const outcomes = JSON.parse(lastChoice.outcomes_json || "{}");
+      const displayOrder = JSON.parse(lastChoice.display_order_json || "[]");
+      const cueMeans = JSON.parse(lastChoice.cue_means_json || "{}");
+      const cueSource = lastChoice.phase === "training" ? trainingCueMap : cueMap;
+      const shownCueIds = FEEDBACK_MODE === "all" ? displayOrder : [lastChoice.selected_cue];
+      const cards = shownCueIds.map((cueId) => {
+        const cue = cueSource[cueId];
+        const selectedClass = cueId === lastChoice.selected_cue ? " selected" : "";
+        const amount = outcomes[cueId];
+        return `
+          <div class="feedback-card${selectedClass}">
+            ${renderCueCard(cue)}
+            <div class="amount">${amount} 点</div>
+            <div class="small">${cueId === lastChoice.selected_cue ? "你选择的选项" : "未选择选项"}</div>
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="screen center">
+          <h2>结果反馈</h2>
+          <p>${"反馈阶段同时显示当前三个选项本次对应的点数，并标出被试所选选项。"}</p>
+          <div class="feedback-grid">${cards}</div>
+          <p class="small">选项的真实平均价值不会显示在实验界面中。</p>
+        </div>
+      `;
+    },
+    data: { task: "feedback", feedback_mode: FEEDBACK_MODE },
+  };
+}
+
+function makeInstructionQuizLoop() {
+  return {
+    timeline: [
+      {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+          <div class="screen">
+            <h1>实验说明</h1>
+            <p>本实验包含学习阶段和两个迁移测量阶段。你会看到若干抽象线索，并通过反馈学习它们的平均点数。</p>
+            <p>每个结果都在 <strong>0 到 100 点</strong>之间。点数会按固定比例换算为报酬：</p>
+            <table class="outcome-table">
+              <tr><th>点数</th><th>换算</th></tr>
+              <tr><td>1 点</td><td>0.02 pence</td></tr>
+              <tr><td>50 点</td><td>1.00 pence</td></tr>
+              <tr><td>100 点</td><td>2.00 pence</td></tr>
+            </table>
+            <ul>
+              <li>学习阶段：每次会出现三个选项，请选择你认为平均点数最高的选项。</li>
+              <li>本版本：反馈阶段同时显示当前三个选项本次对应的点数，并标出被试所选选项。</li>
+              <li>学习后会显示你在学习阶段累计获得的总点数及其金额换算。</li>
+              <li>迁移选择和显式评分阶段不会显示反馈，以免改变你已经学到的主观价值。</li>
+            </ul>
+          </div>
+        `,
+        choices: ["进入理解测验"],
+        data: { task: "instruction" },
+      },
+      {
+        type: jsPsychSurveyHtmlForm,
+        preamble: `<div class="screen"><h2>理解测验</h2><p>请回答下面 3 个问题。全部答对后才能进入训练。</p>`,
+        html: `
+          <p><strong>1. 1 点可以换算为多少 pence？</strong></p>
+          <label><input type="radio" name="q1" value="0.02" required /> 0.02 pence</label><br />
+          <label><input type="radio" name="q1" value="0.2" /> 0.20 pence</label><br />
+          <label><input type="radio" name="q1" value="2" /> 2.00 pence</label>
+
+          <p><strong>2. 学习阶段你应该选择什么？</strong></p>
+          <label><input type="radio" name="q2" value="highest" required /> 我认为平均点数最高的选项</label><br />
+          <label><input type="radio" name="q2" value="lowest" /> 我认为平均点数最低的选项</label><br />
+          <label><input type="radio" name="q2" value="random" /> 随机选择</label>
+
+          <p><strong>3. 迁移选择和显式评分阶段是否会显示结果反馈？</strong></p>
+          <label><input type="radio" name="q3" value="no" required /> 不会显示反馈</label><br />
+          <label><input type="radio" name="q3" value="yes" /> 会继续显示反馈</label>
+          </div>
+        `,
+        button_label: "提交答案",
+        data: { task: "quiz" },
+        on_finish: (data) => {
+          const response = data.response || {};
+          state.quizPassed = response.q1 === "0.02" && response.q2 === "highest" && response.q3 === "no";
+          data.quiz_passed = state.quizPassed ? 1 : 0;
+        },
+      },
+      {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: () => `
+          <div class="screen center">
+            <h2 class="quiz-feedback ${state.quizPassed ? "passed" : "failed"}">${state.quizPassed ? "测验通过" : "测验未通过"}</h2>
+            <p>${state.quizPassed ? "你可以进入训练阶段。" : "请重新阅读说明并再次作答。"}</p>
+          </div>
+        `,
+        choices: () => [state.quizPassed ? "开始训练" : "返回说明"],
+        data: { task: "quiz_feedback" },
+      },
+    ],
+    loop_function: () => !state.quizPassed,
+  };
+}
+
+function makeTrainingLoop() {
+  const trainingTimeline = [
+    {
+      type: jsPsychCallFunction,
+      func: () => {
+        state.trainingAttempt += 1;
+        state.trainingCorrect = 0;
+        state.trainingCount = 0;
+        state.repeatTraining = false;
+        state.trainingTrials = makeTripletTrials(TRAINING_TRIPLETS, TRAINING_TRIALS / TRAINING_TRIPLETS.length, trainingCueMap, "training");
+      },
+      data: { task: "training_init" },
+    },
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: () => `
+        <div class="screen center">
+          <h2>训练阶段</h2>
+          <p>训练共有 ${TRAINING_TRIALS} 个试次，用来熟悉三角形刺激位置和选择方式。</p>
+          <p>如果正确率低于 60%，需要重复训练直到达标。达标后，你也可以最多自愿重复两次训练。</p>
+          <p class="small">当前训练次数：${state.trainingAttempt}；已自愿重复：${state.voluntaryTrainingRepeats} / ${MAX_VOLUNTARY_TRAINING_REPEATS}</p>
+        </div>
+      `,
+      choices: ["开始训练"],
+      data: { task: "training_instruction" },
+    },
+  ];
+
+  for (let index = 0; index < TRAINING_TRIALS; index += 1) {
+    trainingTimeline.push(makeChoiceTrial("trainingTrials", index, "训练阶段", TRAINING_TRIALS, true));
+    trainingTimeline.push(makeOutcomeFeedbackTrial());
+  }
+
+  trainingTimeline.push({
+    type: jsPsychHtmlButtonResponse,
+    stimulus: () => {
+      const accuracy = state.trainingCorrect / Math.max(state.trainingCount, 1);
+      const passed = accuracy >= TRAINING_PASS_ACCURACY;
+      return `
+        <div class="screen center">
+          <h2>训练结果</h2>
+          <p>正确选择最高平均价值选项的比例：<strong>${Math.round(accuracy * 100)}%</strong></p>
+          <p class="${passed ? "quiz-feedback passed" : "quiz-feedback failed"}">${passed ? "训练达标。" : "训练未达到 60% 标准。"}</p>
+          <p>${!passed ? "请重复训练直到达到 60% 标准。" : "接下来可以进入正式学习阶段，或自愿再练习一次。"}</p>
+        </div>
+      `;
+    },
+    choices: () => {
+      const accuracy = state.trainingCorrect / Math.max(state.trainingCount, 1);
+      const passed = accuracy >= TRAINING_PASS_ACCURACY;
+      const canVolunteer = passed && state.voluntaryTrainingRepeats < MAX_VOLUNTARY_TRAINING_REPEATS;
+      if (!passed) return ["重新训练"];
+      if (canVolunteer) return ["进入正式实验", "自愿再练习一次"];
+      return ["进入正式实验"];
+    },
+    data: { task: "training_summary" },
+    on_finish: (data) => {
+      const accuracy = state.trainingCorrect / Math.max(state.trainingCount, 1);
+      const passed = accuracy >= TRAINING_PASS_ACCURACY;
+      const canVolunteer = passed && state.voluntaryTrainingRepeats < MAX_VOLUNTARY_TRAINING_REPEATS;
+      const voluntaryRepeat = canVolunteer && data.response === 1;
+      if (voluntaryRepeat) {
+        state.voluntaryTrainingRepeats += 1;
+      }
+      state.repeatTraining = !passed || voluntaryRepeat;
+      data.training_attempt = state.trainingAttempt;
+      data.training_accuracy = roundNumber(accuracy, 4);
+      data.training_passed = passed ? 1 : 0;
+      data.voluntary_training_repeats = state.voluntaryTrainingRepeats;
+      data.repeat_training = state.repeatTraining ? 1 : 0;
+    },
+  });
+
+  return {
+    timeline: trainingTimeline,
+    loop_function: () => state.repeatTraining,
+  };
+}
+
+function makeLearningPhase() {
+  const timeline = [
+    {
+      type: jsPsychCallFunction,
+      func: () => {
+        state.learningPoints = 0;
+        state.learningTrials = makeTripletTrials(LEARNING_TRIPLETS, LEARNING_REPETITIONS, cueMap, "learning");
+      },
+      data: { task: "learning_init" },
+    },
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="screen center">
+          <h2>正式学习阶段</h2>
+          <p>正式学习阶段包含 4 个固定三元组，每个三元组呈现 45 次，共 180 个试次。</p>
+          <p>每个线索的结果来自均值在 0 到 100 点之间、方差为 4 的正态分布。</p>
+          <p>请选择你认为平均点数最高的选项。</p>
+        </div>
+      `,
+      choices: ["开始学习阶段"],
+      data: { task: "learning_instruction" },
+    },
+  ];
+
+  for (let index = 0; index < LEARNING_TRIPLETS.length * LEARNING_REPETITIONS; index += 1) {
+    timeline.push(makeChoiceTrial("learningTrials", index, "学习阶段", LEARNING_TRIPLETS.length * LEARNING_REPETITIONS, true));
+    timeline.push(makeOutcomeFeedbackTrial());
+  }
+
+  timeline.push({
+    type: jsPsychHtmlButtonResponse,
+    stimulus: () => {
+      const pence = state.learningPoints * POINT_TO_PENCE;
+      return `
+        <div class="screen center">
+          <h2>学习阶段结束</h2>
+          <p>你在学习阶段共获得：</p>
+          <p style="font-size: 2.8rem; font-weight: 800; color: var(--good);">${state.learningPoints} 点</p>
+          <p>按 1 点 = 0.02 pence 换算，约为 <strong>${roundNumber(pence, 2)} pence</strong>。</p>
+          <p class="small">接下来进入两个无反馈测量阶段；你的反应仍会被记录并计入最终数据。</p>
+        </div>
+      `;
+    },
+    choices: ["继续"],
+    data: { task: "learning_summary" },
+    on_finish: (data) => {
+      data.learning_points = state.learningPoints;
+      data.learning_pence = roundNumber(state.learningPoints * POINT_TO_PENCE, 2);
+    },
+  });
+
+  return timeline;
+}
+
+function makeTransferPhase() {
+  const timeline = [
+    {
+      type: jsPsychCallFunction,
+      func: () => {
+        state.transferCorrect = 0;
+        state.transferTrials = makeTransferTrials();
+      },
+      data: { task: "transfer_init" },
+    },
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="screen center">
+          <h2>迁移选择阶段</h2>
+          <p>你会看到学习阶段出现过的 10 个线索组成的所有二元组合。</p>
+          <p>有些组合可能从未在学习阶段一起出现过。请选择你认为平均价值更高的线索。</p>
+          <p class="warning">本阶段不提供结果反馈，以免改变你已经学到的线索价值。</p>
+        </div>
+      `,
+      choices: ["开始迁移选择"],
+      data: { task: "transfer_instruction" },
+    },
+  ];
+
+  for (let index = 0; index < 45 * TRANSFER_REPETITIONS; index += 1) {
+    timeline.push(makeChoiceTrial("transferTrials", index, "迁移选择阶段", 45 * TRANSFER_REPETITIONS, false));
+  }
+
+  return timeline;
+}
+
+function makeRatingTrial(index) {
+  return {
+    type: jsPsychSurveyHtmlForm,
+    preamble: () => {
+      const trial = state.ratingTrials[index];
+      return `
+        <div class="screen center">
+          ${trialHeader("显式评分阶段", index + 1, LEARNING_CUES.length * RATING_REPETITIONS)}
+          <p>请估计该线索的平均点数。</p>
+          <div class="rating-wrap">
+            <div class="rating-cue">${renderCueCard(trial.cue)}</div>
+          </div>
+        </div>
+      `;
+    },
+    html: `
+      <div class="rating-wrap">
+        <input class="rating-slider" name="rating" type="range" min="0" max="100" value="50" oninput="document.getElementById('rating-output').value = this.value" />
+        <p>当前估计：<output id="rating-output">50</output> 点</p>
+      </div>
+    `,
+    button_label: "提交评分",
+    data: {
+      task: "rating",
+      phase: "rating",
+      feedback_mode: FEEDBACK_MODE,
+      experiment_version: EXPERIMENT_VERSION,
+    },
+    on_finish: (data) => {
+      const trial = state.ratingTrials[index];
+      const rating = Number(data.response.rating);
+      data.cue_id = trial.cue.id;
+      data.cue_label = trial.cue.label;
+      data.cue_mean = trial.cue.mean;
+      data.repetition = trial.repetition;
+      data.rating = rating;
+      data.absolute_error = Math.abs(rating - trial.cue.mean);
+    },
+  };
+}
+
+function makeRatingPhase() {
+  const timeline = [
+    {
+      type: jsPsychCallFunction,
+      func: () => {
+        state.ratingTrials = makeRatingTrials();
+      },
+      data: { task: "rating_init" },
+    },
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="screen center">
+          <h2>显式评分阶段</h2>
+          <p>每次会单独显示一个学习阶段见过的线索。请用滑块估计它的平均点数，范围为 0 到 100。</p>
+          <p class="warning">本阶段不提供结果反馈。</p>
+        </div>
+      `,
+      choices: ["开始显式评分"],
+      data: { task: "rating_instruction" },
+    },
+  ];
+
+  for (let index = 0; index < LEARNING_CUES.length * RATING_REPETITIONS; index += 1) {
+    timeline.push(makeRatingTrial(index));
+  }
+
+  return timeline;
+}
+
+function makeDownloadHtml() {
+  const data = jsPsych.data.get();
+  const filenameStem = `${state.participantId || "participant"}_${FEEDBACK_MODE}_${new Date().toISOString().replace(/[:.]/g, "-")}`;
+  const jsonBlob = new Blob([data.json()], { type: "application/json" });
+  const csvBlob = new Blob([data.csv()], { type: "text/csv" });
+  const jsonUrl = URL.createObjectURL(jsonBlob);
+  const csvUrl = URL.createObjectURL(csvBlob);
+  const transferBonus = state.transferCorrect;
+
+  return `
+    <div class="screen center">
+      <h2>实验结束，感谢参与！</h2>
+      <p>学习阶段累计点数：<strong>${state.learningPoints}</strong> 点（${roundNumber(state.learningPoints * POINT_TO_PENCE, 2)} pence）。</p>
+      <p>迁移选择正确次数：<strong>${transferBonus}</strong> / 180。</p>
+      <p>请下载数据文件并按研究流程保存或上传。</p>
+      <div class="download-links">
+        <a class="download-link" href="${jsonUrl}" download="${filenameStem}.json">下载 JSON</a>
+        <a class="download-link" href="${csvUrl}" download="${filenameStem}.csv">下载 CSV</a>
+      </div>
+    </div>
+  `;
+}
+
+function buildTimeline() {
+  const timeline = [];
+  state.elicitationOrder = Math.random() < 0.5 ? ["transfer", "rating"] : ["rating", "transfer"];
+
+  // 实验一开始请求全屏，尽量统一呈现区域，减少浏览器界面对三角形刺激位置的干扰。
+  timeline.push({
+    type: jsPsychFullscreen,
+    fullscreen_mode: true,
+    message: `
+      <div class="screen center">
+        <h1>三臂老虎机学习实验</h1>
+        <p>当前程序：<strong>${FEEDBACK_MODE_LABEL}</strong></p>
+        <p>点击下方按钮后，实验将进入全屏模式。</p>
+      </div>
+    `,
+    button_label: "进入全屏并开始",
+    data: { task: "fullscreen_start", feedback_mode: FEEDBACK_MODE },
+  });
+
+  timeline.push({
+    type: jsPsychSurveyHtmlForm,
+    preamble: `
+      <div class="screen">
+        <h1>被试信息</h1>
+        <p>请输入被试编号并确认同意参加实验。</p>
+      </div>
+    `,
+    html: `
+      <p><label>被试编号（可留空自动生成）：
+        <input name="participant_id" type="text" autocomplete="off" />
+      </label></p>
+      <p><label>
+        <input name="consent" type="checkbox" required />
+        我已阅读说明，并同意参加本实验。
+      </label></p>
+    `,
+    button_label: "继续",
+    data: { task: "metadata", experiment_version: EXPERIMENT_VERSION, feedback_mode: FEEDBACK_MODE },
+    on_finish: (data) => {
+      const response = data.response || {};
+      state.participantId = response.participant_id ? String(response.participant_id).trim() : makeParticipantId();
+      jsPsych.data.addProperties({
+        participant_id: state.participantId,
+        experiment_version: EXPERIMENT_VERSION,
+        feedback_mode: FEEDBACK_MODE,
+        elicitation_order: state.elicitationOrder.join("_then_"),
+        user_agent: navigator.userAgent,
+        screen_width: window.screen.width,
+        screen_height: window.screen.height,
+      });
+    },
+  });
+
+  timeline.push(...makeGazeSetupTimeline());
+  timeline.push(makeInstructionQuizLoop());
+  timeline.push(makeTrainingLoop());
+  timeline.push(...makeLearningPhase());
+
+  state.elicitationOrder.forEach((phase) => {
+    if (phase === "transfer") {
+      timeline.push(...makeTransferPhase());
+    } else {
+      timeline.push(...makeRatingPhase());
+    }
+  });
+
+  timeline.push({
+    type: jsPsychHtmlButtonResponse,
+    stimulus: makeDownloadHtml,
+    choices: ["完成"],
+    data: { task: "finish", feedback_mode: FEEDBACK_MODE },
+  });
+
+  return timeline;
+}
+
+jsPsych.run(buildTimeline());
+    </script>
+  </body>
+</html>

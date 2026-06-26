@@ -7,7 +7,8 @@
 
 ```text
 Project_Target/
-  experiment/          # jsPsych + webgazer 在线实验
+  experiment/
+    index.html         # jsPsych + webgazer 单文件在线实验
   analysis/            # DN-RL-DDM 拟合代码
   docs/                # 研究设计与模型说明
 Project_Target.md      # 原始项目目标记录
@@ -17,7 +18,7 @@ Project_Target.md      # 原始项目目标记录
 
 ```bash
 cd Project_Target/experiment
-python -m http.server 8000
+python3 -m http.server 8000
 ```
 
 然后在浏览器打开 `http://localhost:8000`。实验会记录：
@@ -28,6 +29,7 @@ python -m http.server 8000
 - 每个选项 AOI 的 dwell time、dwell proportion、first AOI 等指标。
 
 > 浏览器眼动使用 webgazer.js，需要 HTTPS 或 localhost，并依赖被试授权摄像头。
+> 实验的 CSS 和 JavaScript 已内联在 `index.html` 中，便于单文件分发和审阅。
 
 ## 拟合 DN-RL-DDM
 
@@ -35,19 +37,19 @@ python -m http.server 8000
 
 ```bash
 cd Project_Target/analysis
-python -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 对 jsPsych 导出的 JSON 或 CSV 做模型比较：
 
 ```bash
-python fit_dn_rlddm.py ../data/example_participant.json --output fit_results.csv
+python3 fit_dn_rlddm.py ../data/example_participant.json --output fit_results.csv
 ```
 
 拟合单一模型：
 
 ```bash
-python fit_dn_rlddm.py ../data/example_participant.json --variant gaze_divisive
+python3 fit_dn_rlddm.py ../data/example_participant.json --variant gaze_divisive
 ```
 
 默认比较五个变体：

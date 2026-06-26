@@ -8,7 +8,8 @@
 ```text
 Project_Target/
   experiment/
-    index.html         # jsPsych + webgazer 单文件在线实验
+    index.html                    # 只反馈所选选项奖励的单文件实验
+    all_outcomes_feedback.html    # 反馈三个选项金额的单文件实验
   analysis/            # DN-RL-DDM 拟合代码
   docs/                # 研究设计与模型说明
 Project_Target.md      # 原始项目目标记录
@@ -21,15 +22,23 @@ cd Project_Target/experiment
 python3 -m http.server 8000
 ```
 
-然后在浏览器打开 `http://localhost:8000`。实验会记录：
+然后在浏览器打开其中一个版本：
 
-- 三选项选择、反应时、反馈奖励；
-- 区块条件（range normalization probe 或 all-options divisive-sum probe）；
-- 浏览器眼动估计的原始 gaze 样本；
-- 每个选项 AOI 的 dwell time、dwell proportion、first AOI 等指标。
+- `http://localhost:8000/index.html`: 只显示被试所选选项本次获得的点数；
+- `http://localhost:8000/all_outcomes_feedback.html`: 同时显示当前三个选项本次对应的点数。
 
-> 浏览器眼动使用 webgazer.js，需要 HTTPS 或 localhost，并依赖被试授权摄像头。
-> 实验的 CSS 和 JavaScript 已内联在 `index.html` 中，便于单文件分发和审阅。
+实验包含：
+
+- 开始全屏呈现；
+- 0-100 点结果范围和 `1 点 = 0.02 pence` 换算说明；
+- 3 题理解测验；
+- 12 试次训练，低于 60% 正确率时重复训练，达标后最多可自愿重复 2 次；
+- 学习阶段：4 个固定三元组，每个呈现 45 次，共 180 试次；
+- 迁移选择阶段：10 个线索的 45 个二元组合，每个呈现 4 次，共 180 试次；
+- 显式评分阶段：10 个线索各评分 4 次，共 40 试次；
+- 迁移和评分阶段不提供反馈。
+
+> 实验的 CSS 和 JavaScript 已内联在各自 HTML 中，便于单文件分发和审阅。
 > 实验开始会请求全屏；三臂刺激用相对位置呈等腰三角形排列，以适配不同屏幕尺寸。
 
 ## 拟合 DN-RL-DDM

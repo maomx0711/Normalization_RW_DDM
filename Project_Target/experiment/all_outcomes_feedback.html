@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>三臂老虎机学习与迁移实验 - 所选反馈版</title>
+    <title>三臂老虎机学习与迁移实验 - 全部反馈版</title>
 
     <!-- 从 CDN 加载 jsPsych 核心样式。本文件其余 CSS 与 JavaScript 均已内联。 -->
     <link rel="stylesheet" href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" />
@@ -273,8 +273,8 @@ body {
 
 // ===================== 实验版本与总体设置 =====================
 const EXPERIMENT_VERSION = "0.2.0";
-const FEEDBACK_MODE = "chosen"; // chosen: 只反馈所选选项；all: 反馈三个选项金额。
-const FEEDBACK_MODE_LABEL = "所选反馈版";
+const FEEDBACK_MODE = "all"; // chosen: 只反馈所选选项；all: 反馈三个选项金额。
+const FEEDBACK_MODE_LABEL = "全部反馈版";
 const OUTCOME_MIN = 0;
 const OUTCOME_MAX = 100;
 const POINT_TO_PENCE = 0.02;
@@ -579,7 +579,7 @@ function makeOutcomeFeedbackTrial() {
       return `
         <div class="screen center">
           <h2>结果反馈</h2>
-          <p>${"反馈阶段只显示被试所选选项本次获得的点数。"}</p>
+          <p>${"反馈阶段同时显示当前三个选项本次对应的点数，并标出被试所选选项。"}</p>
           <div class="feedback-grid">${cards}</div>
           <p class="small">选项的真实平均价值不会显示在实验界面中。</p>
         </div>
@@ -607,7 +607,7 @@ function makeInstructionQuizLoop() {
             </table>
             <ul>
               <li>学习阶段：每次会出现三个选项，请选择你认为平均点数最高的选项。</li>
-              <li>本版本：反馈阶段只显示被试所选选项本次获得的点数。</li>
+              <li>本版本：反馈阶段同时显示当前三个选项本次对应的点数，并标出被试所选选项。</li>
               <li>学习后会显示你在学习阶段累计获得的总点数及其金额换算。</li>
               <li>迁移选择和显式评分阶段不会显示反馈，以免改变你已经学到的主观价值。</li>
             </ul>

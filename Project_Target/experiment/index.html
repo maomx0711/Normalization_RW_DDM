@@ -234,6 +234,42 @@ body {
   width: min(560px, 86vw);
 }
 
+
+/* 眼动校准蓝点必须位于 webgazer 视频/画布之上，否则摄像头打开后可能被覆盖。 */
+.gaze-calibration-wrap {
+  height: 72vh;
+  position: relative;
+  width: 92vw;
+  z-index: 10000;
+}
+
+.gaze-calibration-dot {
+  background: var(--accent);
+  border: 4px solid #dbeafe;
+  border-radius: 999px;
+  box-shadow: 0 0 0 6px rgb(37 99 235 / 20%);
+  color: #fff;
+  font-weight: 800;
+  height: 46px;
+  left: var(--gaze-left);
+  position: fixed;
+  top: var(--gaze-top);
+  transform: translate(-50%, -50%);
+  width: 46px;
+  z-index: 2147483647;
+}
+
+#webgazerVideoContainer,
+#webgazerVideoFeed,
+#webgazerFaceOverlay,
+#webgazerFaceFeedbackBox {
+  z-index: 1000 !important;
+}
+
+#webgazerGazeDot {
+  z-index: 1001 !important;
+}
+
 .download-links {
   display: flex;
   flex-wrap: wrap;
@@ -267,9 +303,10 @@ body {
     <script src="https://unpkg.com/@jspsych/plugin-survey-html-form@1.0.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-call-function@1.1.3"></script>
     <script src="https://unpkg.com/@jspsych/plugin-fullscreen@1.2.1"></script>
+    <script src="https://webgazer.cs.brown.edu/webgazer.js"></script>
 
     <script>
-/* global initJsPsych, jsPsychHtmlButtonResponse, jsPsychHtmlKeyboardResponse, jsPsychSurveyHtmlForm, jsPsychCallFunction, jsPsychFullscreen */
+/* global initJsPsych, jsPsychHtmlButtonResponse, jsPsychHtmlKeyboardResponse, jsPsychSurveyHtmlForm, jsPsychCallFunction, jsPsychFullscreen, webgazer */
 
 // ===================== 实验版本与总体设置 =====================
 const EXPERIMENT_VERSION = "0.2.0";
@@ -351,6 +388,12 @@ const state = {
   learningPoints: 0,
   transferCorrect: 0,
   elicitationOrder: null,
+  eyeTracking: {
+    enabled: false,
+    started: false,
+    currentTrial: null,
+    error: null,
+  },
 };
 
 const cueMap = Object.fromEntries(LEARNING_CUES.map((cue) => [cue.id, cue]));
@@ -359,6 +402,9 @@ const trainingCueMap = Object.fromEntries(TRAINING_CUES.map((cue) => [cue.id, cu
 const jsPsych = initJsPsych({
   show_progress_bar: true,
   auto_update_progress_bar: true,
+  on_finish: () => {
+    stopWebGazer();
+  },
 });
 
 function safeJson(value) {
@@ -480,6 +526,243 @@ function trialHeader(label, current, total) {
   `;
 }
 
+
+// ===================== 浏览器眼动检测与蓝点校准 =====================
+function startGazeTrial(meta) {
+  const buttons = Array.from(document.querySelectorAll(".cue-choice"));
+  const rects = buttons.map((button) => {
+    const rect = button.getBoundingClientRect();
+    return {
+      cue_id: button.dataset.cueId,
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+    };
+  });
+
+  state.eyeTracking.currentTrial = {
+    meta,
+    rects,
+    samples: [],
+    started_at: performance.now(),
+  };
+}
+
+function summarizeGaze(samples, rects, selectedCue) {
+  const dwellByCue = Object.fromEntries(rects.map((rect) => [rect.cue_id, 0]));
+  let firstAoiCue = null;
+  let validSamples = 0;
+
+  for (let index = 0; index < samples.length; index += 1) {
+    const sample = samples[index];
+    if (!Number.isFinite(sample.x) || !Number.isFinite(sample.y)) {
+      continue;
+    }
+
+    validSamples += 1;
+    const hit = rects.find(
+      (rect) =>
+        sample.x >= rect.left &&
+        sample.x <= rect.right &&
+        sample.y >= rect.top &&
+        sample.y <= rect.bottom,
+    );
+
+    if (!hit) {
+      continue;
+    }
+
+    if (firstAoiCue === null) {
+      firstAoiCue = hit.cue_id;
+    }
+
+    const next = samples[index + 1];
+    const rawDuration = next ? next.t - sample.t : 16.7;
+    const duration = Math.max(0, Math.min(rawDuration, 100));
+    dwellByCue[hit.cue_id] += duration;
+  }
+
+  const totalDwell = Object.values(dwellByCue).reduce((sum, duration) => sum + duration, 0);
+  const dwellPropByCue = Object.fromEntries(
+    Object.entries(dwellByCue).map(([cue, duration]) => [cue, totalDwell > 0 ? duration / totalDwell : 0]),
+  );
+
+  return {
+    gaze_valid_samples: validSamples,
+    gaze_total_aoi_ms: roundNumber(totalDwell),
+    gaze_first_aoi_cue: firstAoiCue,
+    gaze_dwell_ms_json: safeJson(Object.fromEntries(Object.entries(dwellByCue).map(([cue, duration]) => [cue, roundNumber(duration)]))),
+    gaze_dwell_prop_json: safeJson(Object.fromEntries(Object.entries(dwellPropByCue).map(([cue, proportion]) => [cue, roundNumber(proportion, 4)]))),
+    gaze_selected_dwell_prop: selectedCue ? roundNumber(dwellPropByCue[selectedCue] || 0, 4) : null,
+  };
+}
+
+function stopGazeTrial(data) {
+  const current = state.eyeTracking.currentTrial;
+  state.eyeTracking.currentTrial = null;
+
+  data.gaze_enabled = state.eyeTracking.enabled;
+  data.gaze_error = state.eyeTracking.error;
+
+  if (!current) {
+    data.gaze_n_samples = 0;
+    return;
+  }
+
+  const compactSamples = current.samples.map((sample) => ({
+    x: roundNumber(sample.x),
+    y: roundNumber(sample.y),
+    t: roundNumber(sample.t - current.started_at),
+  }));
+
+  data.gaze_n_samples = compactSamples.length;
+  data.gaze_aoi_rects_json = safeJson(current.rects.map((rect) => ({ ...rect })));
+  data.gaze_samples_json = safeJson(compactSamples);
+  Object.assign(data, summarizeGaze(current.samples, current.rects, data.selected_cue));
+}
+
+async function startWebGazer() {
+  if (!window.webgazer) {
+    state.eyeTracking.enabled = false;
+    state.eyeTracking.error = "webgazer_not_loaded";
+    return;
+  }
+
+  try {
+    webgazer
+      .setGazeListener((gazeData) => {
+        if (!gazeData) {
+          return;
+        }
+
+        const sample = {
+          x: gazeData.x,
+          y: gazeData.y,
+          t: performance.now(),
+        };
+
+        if (state.eyeTracking.currentTrial) {
+          state.eyeTracking.currentTrial.samples.push(sample);
+        }
+      })
+      .showPredictionPoints(true)
+      .showVideoPreview(true)
+      .showFaceOverlay(false)
+      .showFaceFeedbackBox(false);
+
+    if (typeof webgazer.setRegression === "function") {
+      webgazer.setRegression("ridge");
+    }
+
+    await webgazer.begin();
+    state.eyeTracking.enabled = true;
+    state.eyeTracking.started = true;
+    state.eyeTracking.error = null;
+  } catch (error) {
+    state.eyeTracking.enabled = false;
+    state.eyeTracking.error = error && error.message ? error.message : "webgazer_start_failed";
+  }
+}
+
+function stopWebGazer() {
+  if (window.webgazer && state.eyeTracking.started) {
+    try {
+      webgazer.end();
+    } catch (error) {
+      state.eyeTracking.error = error && error.message ? error.message : "webgazer_stop_failed";
+    }
+  }
+}
+
+function makeCalibrationTrial(point, repeatIndex) {
+  return {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+      <div class="gaze-calibration-wrap">
+        <p class="small center">眼动校准：请看着蓝点并点击它（${repeatIndex + 1}/3）。如果摄像头预览已打开，蓝点也应显示在最上层。</p>
+      </div>
+    `,
+    choices: ["+"],
+    button_html: [`<button class="jspsych-btn gaze-calibration-dot" style="--gaze-left:${point.x}vw; --gaze-top:${point.y}vh;">%choice%</button>`],
+    data: {
+      task: "gaze_calibration",
+      calibration_x_vw: point.x,
+      calibration_y_vh: point.y,
+      calibration_repeat: repeatIndex + 1,
+    },
+    on_load: () => {
+      const dot = document.querySelector(".gaze-calibration-dot");
+      if (!dot || !window.webgazer || typeof webgazer.recordScreenPosition !== "function") {
+        return;
+      }
+      dot.addEventListener("mousedown", (event) => {
+        webgazer.recordScreenPosition(event.clientX, event.clientY, "click");
+      });
+    },
+  };
+}
+
+function makeGazeSetupTimeline() {
+  const calibrationPoints = [
+    { x: 12, y: 16 },
+    { x: 50, y: 16 },
+    { x: 88, y: 16 },
+    { x: 12, y: 50 },
+    { x: 50, y: 50 },
+    { x: 88, y: 50 },
+    { x: 12, y: 84 },
+    { x: 50, y: 84 },
+    { x: 88, y: 84 },
+  ];
+
+  const timeline = [
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: `
+        <div class="screen center">
+          <h2>眼动检测</h2>
+          <p>接下来浏览器会请求摄像头权限，用于估计注视位置。</p>
+          <p class="small">请允许摄像头访问。若摄像头不可用，实验仍会继续，但会在数据中记录眼动错误。</p>
+        </div>
+      `,
+      choices: ["启动摄像头并继续"],
+      data: { task: "gaze_instruction" },
+    },
+    {
+      type: jsPsychCallFunction,
+      async: true,
+      func: (done) => {
+        startWebGazer().finally(done);
+      },
+      data: { task: "webgazer_start" },
+    },
+    {
+      type: jsPsychHtmlButtonResponse,
+      stimulus: () => `
+        <div class="screen center">
+          <h2>蓝点校准</h2>
+          <p>${state.eyeTracking.enabled ? "摄像头已启动。" : "摄像头未成功启动，实验仍会继续。"}</p>
+          <p>下一步会显示蓝点。请确认摄像头打开时蓝点仍然可见，然后看着蓝点并点击。</p>
+          <p class="small">当前眼动状态：${state.eyeTracking.enabled ? "enabled" : "disabled"}${state.eyeTracking.error ? `；错误：${state.eyeTracking.error}` : ""}</p>
+        </div>
+      `,
+      choices: ["开始蓝点校准"],
+      data: { task: "gaze_calibration_instruction" },
+    },
+  ];
+
+  calibrationPoints.forEach((point) => {
+    for (let repeatIndex = 0; repeatIndex < 3; repeatIndex += 1) {
+      timeline.push(makeCalibrationTrial(point, repeatIndex));
+    }
+  });
+
+  return timeline;
+}
+
 function makeChoiceTrial(storeName, index, phaseLabel, totalTrials, withOutcome) {
   return {
     type: jsPsychHtmlButtonResponse,
@@ -501,7 +784,13 @@ function makeChoiceTrial(storeName, index, phaseLabel, totalTrials, withOutcome)
       experiment_version: EXPERIMENT_VERSION,
     },
     on_load: () => {
-      addChoiceLayout(state[storeName][index].cues.length);
+      const trial = state[storeName][index];
+      addChoiceLayout(trial.cues.length);
+      startGazeTrial({
+        phase: trial.phase,
+        trial_index: index + 1,
+        cue_ids: trial.cues.map((cue) => cue.id),
+      });
     },
     on_finish: (data) => {
       const trial = state[storeName][index];
@@ -547,6 +836,7 @@ function makeChoiceTrial(storeName, index, phaseLabel, totalTrials, withOutcome)
       data.outcomes_json = safeJson(outcomes);
       data.selected_outcome = selectedOutcome;
       data.learning_points_running_total = state.learningPoints;
+      stopGazeTrial(data);
     },
   };
 }
@@ -972,6 +1262,7 @@ function buildTimeline() {
     },
   });
 
+  timeline.push(...makeGazeSetupTimeline());
   timeline.push(makeInstructionQuizLoop());
   timeline.push(makeTrainingLoop());
   timeline.push(...makeLearningPhase());
